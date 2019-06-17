@@ -30,6 +30,7 @@ while IFS='' read -r line || [ -n "$line" ]; do
         cd run$a-$b
         { time fast_dp --lib=$lib -1 $a -N $b $line 2> fast_dp.error; } 2> time.txt
 #        fast_dp --lib=$lib -1 $a -N $b $line
+        if [ ! -s fast_dp.error ]; then rm fast_dp.error; fi
         cd ..
         a=`expr $a + $1`
         b=`expr $b + $1`
