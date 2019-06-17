@@ -1,6 +1,8 @@
 #!/bin/bash
 #$1 = wedge size
 #$2 = directory, should be absolute path
+trap handler SIGINT
+handler() { echo "interrupted"; exit 1; }
 work_dir=$PWD
 lib=$(which dectris-neggia.so)
 if [ "$lib" = "" ]; then echo "error: no dectris-neggia.so found!"; exit 1; fi

@@ -1,0 +1,47 @@
+#!/bin/bash
+trap handler SIGINT
+handler() { echo "interrupted"; exit 1; }
+
+#### TODO: ####
+#find $1 -name "XDS_ASCII.HKL" > hkl_files.dat
+#sort -k 7,7 -n -t '_' hkl_files.dat > hkl_sorted.dat #temporarily sort by 7th col
+#split -a 3  --lines=30 --additional-suffix=.dat --numeric-suffixes=100 hkl_sorted.dat hkl_files #split by 30 hkl's per batch
+
+a=100
+#b=$(ls | grep -E "hkl_files[0-9]{3}.dat" | wc -l)
+#b=`expr $b + $a`
+b=113 #temporarily hardcoded
+work_dir=$PWD
+percentile=$1 #merge clusters in this percentile and above.
+awk_prog="BEGIN { x=0; percentile=$percentile; }
+/[0-9]+/{ x = x+\$3/(\$2*\$2*\$2); arr[NR] = \$1; arr2[NR] = \$3/(\$2*\$2*\$2) }
+END{
+n=asort(arr2, sorted_arr);
+cutoff = sorted_arr[int(n*(100-percentile)/100)];
+for(i in arr2) {
+    if(arr2[i] < cutoff) print arr[i];
+ }
+}"
+if [ $(which blend) = "" ]; then echo "blend not found!!"; exit 1; fi
+while [ $a -lt $b ]; do
+    mkdir -p blend/$a
+    cp hkl_files$a.dat blend/$a/
+    cd blend/$a
+    blend -a hkl_files$a.dat < /dev/null #no keyworded input for now
+#    awk '/[0-9]/ { printf("%f \t \t \t %s \n", $3/($2*$2), $0) }' CLUSTERS.txt
+#    awk '/[0-9]/ { if($3/($2*$2) < 0.03) printf("%d\n", $1) }' CLUSTERS.txt > to_merge.txt
+    awk "$awk_prog" CLUSTERS.txt > to_merge.txt
+    cat to_merge.txt
+    while IFS=''; read -r line || [ -n "$line" ]; do
+        echo $line
+        blend -c [$line] < /dev/null
+#        output=$(modified_blend -c [$line] < /dev/null)
+#        echo "$output" > tmp
+#        cat tmp
+#        error=$(cat tmp | grep "ERROR")
+#        echo "$error"
+    done < to_merge.txt
+#    rm to_merge.txt
+    cd $work_dir
+    a=`expr $a + 1`
+done
